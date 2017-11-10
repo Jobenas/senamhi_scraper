@@ -1,6 +1,10 @@
 import requests
 import pandas as pd
 from bs4 import BeautifulSoup
+import pyowm
+import urllib
+import urllib2
+import json
 
 html = requests.get('http://www.senamhi.gob.pe/peruclima/maps/map_data_ca.php').content
 
@@ -41,5 +45,53 @@ for i in useful_data:
 			if len(new_table) > 0:
 				tables.append(new_table)
 
-		for j in tables:
-			print j
+		last_data = tables[1][0]
+		date = last_data[0]
+		date = date.split('/')
+		date = date[2] + "-" + date[1] + "-" + date[0][1:]
+
+		timestamp = date + " " + last_data[1][1:]
+		no2 = last_data[2]
+		so2 = 0.0
+		pm10 = last_data[4]
+		pm25 = last_data[5]
+		o3 = last_data[6]
+		co = last_data[7]
+
+owm = pyowm.OWM('6ec107ebbe662eae76512e5608ac1344')
+observation = owm.weather_at_place('Lima,pe')
+w = observation.get_weather()
+temperature = w.get_temperature('celsius')['temp']
+humidity = w.get_humidity()
+
+payload = {}
+
+payload['temp'] = temperature
+payload['hum'] = humidity
+payload['sensor_id'] = 1
+payload['timestamp'] = timestamp
+payload['co'] = co
+payload['o3'] = o3
+payload['no2'] = no2
+payload['pm10'] = pm10
+payload['pm25'] = pm25
+payload['so2'] = so2
+payload['co2'] = 0.0
+payload['pm1'] = 0.0
+payload['uv'] = 0.0
+payload['lum'] = 0.0
+payload['sonido'] = 0.0
+payload['username'] = "jobenas"
+payload['pwd'] = "passw0rd"
+
+url = "https://limaio.jobenas.com/limaio/api/v1.0/registerReading"
+
+request = urllib2.Request(url)
+request.add_header('Content-Type', 'application/json')
+
+print payload
+
+response = urllib2.urlopen(request, json.dumps(payload))
+html = response.read()
+
+print html
